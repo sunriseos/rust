@@ -12,6 +12,30 @@ parameters:
   only_on_updated_submodules: ''
 
 steps:
+- bash: |
+    echo "##vso[task.setvariable variable=PATH;]C:/python27amd64;C:/python27amd64/Scripts;C:/Windows/system32;C:/Windows;C:/Windows/System32/Wbem;C:/Windows/System32/WindowsPowerShell/v1.0;C:/Windows/System32/OpenSSH;C:/ProgramData/chocolatey/bin;C:/Program Files/Git/cmd;C:/Program Files/Git/mingw64/bin;C:/Program Files/Git/usr/bin;C:/Users/ContainerAdministrator/AppData/Local/Microsoft/WindowsApps;C:/Program Files/CMake/bin"
+  displayName: "vctools"
+- bash: choco install -y visualstudio2017-workload-vctools
+  displayName: "vctools"
+- bash: choco install -y visualstudio2017buildtools
+  displayName: "buildtools"
+- bash: choco install -y visualstudio2017-workload-universal
+  displayName: "buildtools"
+- bash: choco install -y visualstudio2017-workload-nativedesktop
+  displayName: "buildtools"
+- bash: |
+    set -ex
+    curl -sSf -o rustup-init.exe https://win.rustup.rs
+    ./rustup-init.exe -y --default-toolchain stable
+    export PATH=$PATH:$USERPROFILE/.cargo/bin
+    rustup --version
+    rustup target add aarch64-pc-windows-msvc
+    echo 'fn main() {}' > foo.rs
+    echo a
+    rustc foo.rs --target x86_64-pc-windows-msvc
+    echo b
+    rustc foo.rs --target aarch64-pc-windows-msvc
+  displayName: "rust"
 
 # Disable automatic line ending conversion, which is enabled by default on
 # Azure's Windows image. Having the conversion enabled caused regressions both
@@ -55,9 +79,11 @@ steps:
     set -e
     df -h
     du . | sort -nr | head -n100
-  displayName: Show disk usage
-  # FIXME: this hasn't been tested, but maybe it works on Windows? Should test!
+  displayName: Show disk usage (Unix)
   condition: and(succeeded(), ne(variables['Agent.OS'], 'Windows_NT'))
+- powershell: Get-WmiObject win32_logicaldisk
+  displayName: Show disk usage (Windows)
+  condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
 
 - template: install-sccache.yml
 - template: install-clang.yml
@@ -81,7 +107,7 @@ steps:
     echo '{"ipv6":true,"fixed-cidr-v6":"fd9a:8454:6789:13f7::/64"}' | sudo tee /etc/docker/daemon.json
     sudo service docker restart
   displayName: Enable IPv6
-  condition: and(succeeded(), not(variables.SKIP_JOB), eq(variables['Agent.OS'], 'Linux'))
+  condition: and(succeeded(), not(variables.SKIP_JOB), eq(variables['Agent.OS'], 'Linux'), ne(variables['System.PhaseName'], 'Linux4'))
 
 # Disable automatic line ending conversion (again). On Windows, when we're
 # installing dependencies, something switches the git configuration directory or

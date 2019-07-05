@@ -32,7 +32,7 @@ steps:
     mkdir c:\MORE_SPACE
     mklink /J build c:\MORE_SPACE
   displayName: "Ensure build happens on C:/ instead of D:/"
-  condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
+  condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'), ne(variables['System.PhaseName'], 'Windows4'))
 
 - bash: git config --replace-all --global core.autocrlf false
   displayName: "Disable git automatic line ending conversion (on C:/)"
@@ -59,7 +59,18 @@ steps:
     echo ##vso[task.setvariable variable=MSYS_PATH]%MSYS_PATH%
     echo ##vso[task.prependpath]%MSYS_PATH%\usr\bin
   displayName: Install msys2
-  condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'))
+  condition: and(succeeded(), ne(variables['MINGW_URL'], ''), ne(variables['System.PhaseName'], 'Windows4'))
+
+# For MSVC builders which aren't using a custom MinGW toolchain we install a
+# mingw toolchain which brings in tools like `ar` and `nm` which are used by
+# `run-make` test. Note that these toolchains shouldn't be necessary for the
+# normal build of the compiler, just those tests.
+- script: |
+    pacman -S --noconfirm --needed base-devel
+    IF "%MSYS_BITS%"=="32" pacman -S --noconfirm --needed mingw-w64-i686-toolchain
+    IF "%MSYS_BITS%"=="64" pacman -S --noconfirm --needed mingw-w64-x86_64-toolchain
+  displayName: Install nm/ar tools
+  condition: and(succeeded(), eq(variables['Agent.OS'], 'Windows_NT'), eq(variables['MINGW_URL'], ''))
 
 # If we need to download a custom MinGW, do so here and set the path
 # appropriately.
