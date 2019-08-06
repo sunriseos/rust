@@ -50,6 +50,7 @@ pub unsafe extern fn __rust_start_panic(_payload: usize) -> u32 {
     }
 
     #[cfg(any(target_os = "redox",
+              target_os = "sunrise",
               windows,
               all(target_arch = "wasm32", not(target_os = "emscripten"))))]
     unsafe fn abort() -> ! {
@@ -97,6 +98,7 @@ pub mod personalities {
             target_arch = "wasm32",
             not(target_os = "emscripten"),
         ),
+        target_os = "sunrise",
         all(
             target_os = "windows",
             target_env = "gnu",
