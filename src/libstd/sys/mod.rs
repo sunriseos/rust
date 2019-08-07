@@ -38,6 +38,9 @@ cfg_if::cfg_if! {
     } else if #[cfg(target_os = "wasi")] {
         mod wasi;
         pub use self::wasi::*;
+    } else if #[cfg(target_os = "sunrise")] {
+        mod sunrise;
+        pub use self::sunrise::*;
     } else if #[cfg(target_arch = "wasm32")] {
         mod wasm;
         pub use self::wasm::*;
