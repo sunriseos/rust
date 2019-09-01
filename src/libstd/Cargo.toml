@@ -58,8 +58,8 @@ fortanix-sgx-abi = { version = "0.3.2", features = ['rustc-dep-of-std'] }
 
 [target.'cfg(target_os = "sunrise")'.dependencies]
 # Need #SunriseOS/SunriseOS#402 to actually build
-sunrise-libuser = {git = "https://github.com/sunriseos/SunriseOS.git", features = ['rustc-dep-of-std'] }
-#sunrise-libuser = {path = "../../../Sunrise/libuser", features = ['rustc-dep-of-std'] }
+#sunrise-libuser = {git = "https://github.com/sunriseos/SunriseOS.git", features = ['rustc-dep-of-std'] }
+sunrise-libuser = {path = "../../../SunriseOS/libuser", features = ['rustc-dep-of-std'] }
 
 # Thog: Needed as it seems liballoc and libstd conflict because this feature isn't activated here 
 [target.'cfg(target_os = "sunrise")'.dependencies.compiler_builtins]

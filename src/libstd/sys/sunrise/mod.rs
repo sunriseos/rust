@@ -18,6 +18,7 @@ pub mod alloc;
 pub mod args;
 pub mod cmath;
 pub mod env;
+pub mod fast_thread_local;
 pub mod fs;
 pub mod io;
 pub mod memchr;
