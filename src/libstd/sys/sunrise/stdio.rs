@@ -24,7 +24,14 @@ impl Stdout {
 
 impl io::Write for Stdout {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        panic!("not supported on sunrise yet")
+        // TODO(Sunrise): Bufferize
+        use sunrise_libuser::syscalls::output_debug_string;
+
+        let buf = unsafe { core::str::from_utf8_unchecked(buf) };
+
+        let _ = output_debug_string(buf, 50, "stdout");
+
+        Ok(buf.len())
     }
 
     fn flush(&mut self) -> io::Result<()> {
@@ -40,7 +47,14 @@ impl Stderr {
 
 impl io::Write for Stderr {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        panic!("not supported on sunrise yet")
+        // TODO(Sunrise): Bufferize
+        use sunrise_libuser::syscalls::output_debug_string;
+
+        let buf = unsafe { core::str::from_utf8_unchecked(buf) };
+
+        let _ = output_debug_string(buf, 10, "stderr");
+
+        Ok(buf.len())
     }
 
     fn flush(&mut self) -> io::Result<()> {

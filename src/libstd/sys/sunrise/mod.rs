@@ -71,8 +71,7 @@ pub unsafe fn strlen(mut s: *const c_char) -> usize {
 }
 
 pub unsafe fn abort_internal() -> ! {
-    // WORST IDEA EVER BUT FOR NOW IT'S FINE
-    panic!("not supported on sunrise yet")
+    core::intrinsics::abort();
 }
 
 // We don't have randomness yet, but I totally used a random number generator to

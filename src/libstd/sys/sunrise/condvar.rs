@@ -10,7 +10,7 @@ impl Condvar {
 
     #[inline]
     pub unsafe fn init(&mut self) {
-        panic!("not supported on sunrise yet")
+        //panic!("not supported on sunrise yet")
     }
 
     #[inline]
