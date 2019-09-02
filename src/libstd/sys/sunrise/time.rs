@@ -1,4 +1,6 @@
 use crate::time::Duration;
+use sunrise_libuser::time::RTCManagerProxy;
+
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub struct Instant(Duration);
@@ -36,7 +38,8 @@ impl Instant {
 
 impl SystemTime {
     pub fn now() -> SystemTime {
-        panic!("not supported on sunrise yet")
+        let rtc = RTCManagerProxy::raw_new().unwrap();    
+        SystemTime(Duration::from_secs(rtc.get_rtc_time().unwrap() as u64))
     }
 
     pub fn sub_time(&self, other: &SystemTime)
