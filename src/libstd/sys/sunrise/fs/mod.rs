@@ -9,10 +9,47 @@ use crate::path::{Component, Path, PathBuf};
 use crate::sync::Arc;
 use crate::collections::HashMap;
 use lazy_static::lazy_static;
-use sunrise_libuser::fs::{IFileSystemServiceProxy, IFileSystemProxy};
+use sunrise_libuser::fs::{IFileSystemServiceProxy, IFileSystemProxy, IFileProxy};
 
 use crate::sys::os::getcwd;
 use crate::sync::Mutex;
+
+use crate::io::{Error, ErrorKind};
+
+use sunrise_libuser::error::{Error as LibUserError, FileSystemError};
+
+#[stable(feature = "rust1", since = "1.0.0")]
+impl From<LibUserError> for Error {
+    fn from(user_error: LibUserError) -> Error {
+        match user_error {
+            LibUserError::FileSystem(error, _) => {
+                match error {
+                    FileSystemError::Unknown => Error::new(ErrorKind::Other, "Unknown FileSystem IO Error."),
+                    FileSystemError::PathNotFound | FileSystemError::FileNotFound | FileSystemError::DirectoryNotFound =>
+                        Error::new(ErrorKind::NotFound, "The given resource couldn't be found."),
+                    FileSystemError::PathExists => Error::new(ErrorKind::AlreadyExists, "A resource at the given path already exist."),
+                    FileSystemError::InUse => Error::new(ErrorKind::Other, "Resource already in use."),
+                    FileSystemError::NoSpaceLeft => Error::new(ErrorKind::Other, "There isn't enough space for a resource to be stored."),
+                    FileSystemError::InvalidPartition => Error::new(ErrorKind::Other, "The partition wasn't used as it's invalid."),
+                    FileSystemError::OutOfRange => Error::new(ErrorKind::Other, "Specified value is out of range."),
+                    FileSystemError::WriteFailed => Error::new(ErrorKind::Other, "A write operation failed on the attached storage device."),
+                    FileSystemError::ReadFailed => Error::new(ErrorKind::Other, "A read operation failed on the attached storage device."),
+                    FileSystemError::PartitionNotFound => Error::new(ErrorKind::Other, "The given partition cannot be found."),
+                    FileSystemError::InvalidInput => Error::new(ErrorKind::InvalidInput, "A parameter was incorrect."),
+                    FileSystemError::PathTooLong => Error::new(ErrorKind::InvalidData, "The given path is too long to be resolved."),
+                    FileSystemError::AccessDenied => Error::new(ErrorKind::PermissionDenied, "The operation lacked the necessary privileges to complete."),
+                    FileSystemError::UnsupportedOperation => Error::new(ErrorKind::Other, "The requested operation isn't supported by the detail."),
+                    FileSystemError::NotAFile => Error::new(ErrorKind::Other, "The given resource cannot be represented as a file."),
+                    FileSystemError::NotADirectory => Error::new(ErrorKind::Other, "The given resource cannot be represented as a directory."),
+                    FileSystemError::DiskNotFound => Error::new(ErrorKind::Other, "The given disk id doesn't correspond to a any known disk."),
+                    _ => Error::new(ErrorKind::Other, "Unknown Libuser Filesystem Error.")
+                }
+            },
+            _ => Error::new(ErrorKind::Other, "Unknown Libuser IO Error.")
+        }
+    }
+}
+
 
 lazy_static! {
     /// Registry of all filesystem prefix registered
@@ -44,7 +81,10 @@ fn get_filesystem(path: &Path) -> io::Result<(Arc<IFileSystemProxy>, &Path)> {
     unsupported()
 }
 
-pub struct File(Void);
+pub struct File {
+    inner: IFileProxy,
+    offset: Mutex<u64>
+}
 
 pub struct FileAttr(Void);
 
@@ -53,7 +93,14 @@ pub struct ReadDir(Void);
 pub struct DirEntry(Void);
 
 #[derive(Clone, Debug)]
-pub struct OpenOptions { }
+pub struct OpenOptions {
+    read: bool,
+    write: bool,
+    append: bool,
+    truncate: bool,
+    create: bool,
+    create_new: bool
+}
 
 pub struct FilePermissions(Void);
 
@@ -202,75 +249,174 @@ impl DirEntry {
 
 impl OpenOptions {
     pub fn new() -> OpenOptions {
-        OpenOptions { }
+        OpenOptions {
+            read: false,
+            write: false,
+            append: false,
+            truncate: false,
+            create: false,
+            create_new: false
+        }
     }
 
-    pub fn read(&mut self, _read: bool) { }
-    pub fn write(&mut self, _write: bool) { }
-    pub fn append(&mut self, _append: bool) { }
-    pub fn truncate(&mut self, _truncate: bool) { }
-    pub fn create(&mut self, _create: bool) { }
-    pub fn create_new(&mut self, _create_new: bool) { }
+    pub fn read(&mut self, read: bool) {
+        self.read = read;
+    }
+    pub fn write(&mut self, write: bool) {
+        self.write = write;
+    }
+    pub fn append(&mut self, append: bool) {
+        self.append = append;
+    }
+    pub fn truncate(&mut self, truncate: bool) {
+        self.truncate = truncate;
+    }
+    pub fn create(&mut self, create: bool) {
+        self.create = create;
+        self.append(true);
+    }
+    pub fn create_new(&mut self, create_new: bool) {
+        self.create_new = create_new;
+        self.append(true);
+    }
 }
 
 impl File {
-    pub fn open(p: &Path, _opts: &OpenOptions) -> io::Result<File> {
+    pub fn open(p: &Path, opts: &OpenOptions) -> io::Result<File> {
         let path = getcwd()?.join(p);
         let (fs, path) = get_filesystem(&path)?;
 
-        unsupported()
+
+        let path_bytes = path.to_str().unwrap().as_bytes();
+        let mut raw_path = [0x0; 0x300];
+        raw_path[..path_bytes.len()].copy_from_slice(path_bytes);
+
+        let need_create = opts.create_new || opts.create;
+
+        if need_create {
+            let res = fs.create_file(0, 0, &raw_path);
+
+            if res.is_err() && opts.create_new {
+                let _ = res?;
+            }
+        }
+        
+        let mut flags = 0;
+
+        if opts.read {
+            flags |= 1;
+        }
+
+        if opts.write {
+            flags |= 1 << 1;
+        }
+
+        if opts.append {
+            flags |= 1 << 2;
+        }
+
+        Ok(File {
+            inner: fs.open_file(flags, &raw_path)?,
+            offset: Mutex::new(0)
+        })
     }
 
     pub fn file_attr(&self) -> io::Result<FileAttr> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn fsync(&self) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn datasync(&self) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn truncate(&self, _size: u64) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
-    pub fn read(&self, _buf: &mut [u8]) -> io::Result<usize> {
-        match self.0 {}
+    pub fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
+        let mut buf = buf;
+        let mut offset = self.offset.try_lock().unwrap();
+
+        let out = self.inner.read(0, *offset, buf.len() as u64, buf)?;
+
+        *offset += out as u64;
+
+        Ok(out as usize)
     }
 
-    pub fn read_vectored(&self, _bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
-        match self.0 {}
+    pub fn read_vectored(&self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
+        crate::io::default_read_vectored(|buf| self.read(buf), bufs)
     }
 
-    pub fn write(&self, _buf: &[u8]) -> io::Result<usize> {
-        match self.0 {}
+    pub fn write(&self, buf: &[u8]) -> io::Result<usize> {
+        let mut buf = buf;
+        let mut offset = self.offset.try_lock().unwrap();
+
+        self.inner.write(0, *offset, buf.len() as u64, buf)?;
+
+        *offset += buf.len() as u64;
+
+        Ok(buf.len())
     }
 
-    pub fn write_vectored(&self, _bufs: &[IoSlice<'_>]) -> io::Result<usize> {
-        match self.0 {}
+    pub fn write_vectored(&self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
+        crate::io::default_write_vectored(|buf| self.write(buf), bufs)
     }
 
     pub fn flush(&self) -> io::Result<()> {
-        match self.0 {}
+        self.inner.flush()?;
+
+        Ok(())
     }
 
-    pub fn seek(&self, _pos: SeekFrom) -> io::Result<u64> {
-        match self.0 {}
+    pub fn seek(&self, pos: SeekFrom) -> io::Result<u64> {
+        let mut offset = self.offset.try_lock().unwrap();
+
+        let newpos = match pos {
+            SeekFrom::Current(pos) => {
+                let newval = *offset as i64 + pos;
+
+                if newval < 0 {
+                    return Err(io::Error::from(io::ErrorKind::InvalidInput));
+                } else {
+                    *offset = newval as u64;
+                }
+
+                newval as u64
+            }
+            SeekFrom::Start(pos) => {
+                *offset = pos;
+
+                pos
+            },
+            SeekFrom::End(pos) => {
+                let size = self.inner.get_size()?;
+
+                let newpos = size as i64 + pos;
+
+                if newpos < 0 {
+                    Err(io::Error::from(io::ErrorKind::InvalidInput))?
+                }
+
+                *offset = newpos as u64;
+
+                newpos as u64
+            }
+        };
+
+        Ok(newpos)
     }
 
     pub fn duplicate(&self) -> io::Result<File> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn set_permissions(&self, _perm: FilePermissions) -> io::Result<()> {
-        match self.0 {}
-    }
-
-    pub fn diverge(&self) -> ! {
-        match self.0 {}
+        unsupported()
     }
 }
 
@@ -286,7 +432,7 @@ impl DirBuilder {
 
 impl fmt::Debug for File {
     fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.0 {}
+        unimplemented!();
     }
 }
 
