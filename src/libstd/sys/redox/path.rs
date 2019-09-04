@@ -1,5 +1,5 @@
 use crate::ffi::OsStr;
-use crate::path::Prefix;
+use crate::path::{PrefixComponent, Prefix};
 
 #[inline]
 pub fn is_sep_byte(b: u8) -> bool {
@@ -11,15 +11,11 @@ pub fn is_verbatim_sep(b: u8) -> bool {
     b == b'/'
 }
 
-pub fn parse_prefix(path: &OsStr) -> Option<Prefix<'_>> {
+pub fn parse_prefix(path: &OsStr) -> Option<PrefixComponent<'_>> {
     if let Some(path_str) = path.to_str() {
-        if let Some(_i) = path_str.find(':') {
-            // FIXME: Redox specific prefix
-            // Some(Prefix::Verbatim(OsStr::new(&path_str[..i])))
-            None
-        } else {
-            None
-        }
+        path_str.split('/').next()
+            .and_then(|s| s.bytes().position(|v| v == b':'))
+            .map(|idx| PrefixComponent::from_os_str_kind(OsStr::new(&path_str[..idx + 1]), Prefix::Disk(0)))
     } else {
         None
     }

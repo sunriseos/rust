@@ -19,7 +19,13 @@ pub fn is_verbatim_sep(b: u8) -> bool {
     b == b'\\'
 }
 
-pub fn parse_prefix(path: &OsStr) -> Option<Prefix<'_>> {
+pub fn parse_prefix<'a>(path: &'a OsStr) -> Option<PrefixComponent<'_>> {
+    let pathu8 = os_str_as_u8_slice(path);
+    parse_prefix_simple(path)
+        .map(|v| PrefixComponent::from_os_str_kind(u8_slice_as_os_str(&pathu8[..v.len()]), v))
+}
+
+pub fn parse_prefix_simple(path: &OsStr) -> Option<Prefix<'_>> {
     use crate::path::Prefix::*;
     unsafe {
         // The unsafety here stems from converting between &OsStr and &[u8]
