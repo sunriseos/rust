@@ -41,6 +41,7 @@ pub mod thread_local;
 
 #[cfg(not(test))]
 pub fn init() {
+    fs::init();
 }
 
 pub fn unsupported<T>() -> crate::io::Result<T> {

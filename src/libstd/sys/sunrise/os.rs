@@ -15,7 +15,7 @@ pub fn error_string(_errno: i32) -> String {
 }
 
 pub fn getcwd() -> io::Result<PathBuf> {
-    unsupported()
+    Ok(PathBuf::from("system:/"))
 }
 
 pub fn chdir(_: &path::Path) -> io::Result<()> {

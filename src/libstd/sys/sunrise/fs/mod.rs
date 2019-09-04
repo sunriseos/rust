@@ -2,9 +2,47 @@ use crate::ffi::OsString;
 use crate::fmt;
 use crate::hash::{Hash, Hasher};
 use crate::io::{self, SeekFrom, IoSlice, IoSliceMut};
-use crate::path::{Path, PathBuf};
 use crate::sys::time::SystemTime;
 use crate::sys::{unsupported, Void};
+use crate::path::{Component, Path, PathBuf};
+
+use crate::sync::Arc;
+use crate::collections::HashMap;
+use lazy_static::lazy_static;
+use sunrise_libuser::fs::{IFileSystemServiceProxy, IFileSystemProxy};
+
+use crate::sys::os::getcwd;
+use crate::sync::Mutex;
+
+lazy_static! {
+    /// Registry of all filesystem prefix registered
+    static ref SCHEMA_REGISTRY: Mutex<HashMap<&'static str, Arc<IFileSystemProxy>>> = Mutex::new(HashMap::new());
+}
+
+#[cfg(not(test))]
+pub fn init() {
+    let fs_proxy = IFileSystemServiceProxy::raw_new().unwrap();
+    let system_filesystem = fs_proxy.open_disk_partition(0, 0).unwrap();
+    SCHEMA_REGISTRY.lock().unwrap().insert("system", Arc::new(system_filesystem));
+}
+
+fn get_filesystem(path: &Path) -> io::Result<(Arc<IFileSystemProxy>, &Path)> {
+    assert!(path.is_absolute(), "path is not absolute?");
+    let mut iter = path.components();
+    let prefix = match iter.next() {
+        Some(Component::Prefix(prefix)) => prefix.as_os_str().to_str().unwrap(),
+        _ => panic!("If path is absolute, it should start with prefix")
+    };
+
+    
+    for (key, value) in SCHEMA_REGISTRY.lock().unwrap().iter() {
+        if prefix == *key {
+            return Ok((Arc::clone(&value), &iter.as_path()))
+        }
+    }
+
+    unsupported()
+}
 
 pub struct File(Void);
 
@@ -176,7 +214,11 @@ impl OpenOptions {
 }
 
 impl File {
-    pub fn open(_path: &Path, _opts: &OpenOptions) -> io::Result<File> {
+    pub fn open(p: &Path, _opts: &OpenOptions) -> io::Result<File> {
+        let path = getcwd()?.join(p);
+        let (fs, path) = get_filesystem(&path)?;
+
+        println!("HERE");
         unsupported()
     }
 
