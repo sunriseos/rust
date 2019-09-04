@@ -188,7 +188,7 @@ pub enum Prefix<'a> {
 
 impl<'a> Prefix<'a> {
     #[inline]
-    fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         use self::Prefix::*;
         fn os_str_len(s: &OsStr) -> usize {
             os_str_as_u8_slice(s).len()
@@ -325,9 +325,9 @@ fn has_redox_scheme(s: &[u8]) -> bool {
 ////////////////////////////////////////////////////////////////////////////////
 
 /// Says whether the first byte after the prefix is a separator.
-fn has_physical_root(s: &[u8], prefix: Option<Prefix<'_>>) -> bool {
+fn has_physical_root(s: &[u8], prefix: Option<PrefixComponent<'_>>) -> bool {
     let path = if let Some(p) = prefix {
-        &s[p.len()..]
+        &s[os_str_as_u8_slice(p.as_os_str()).len()..]
     } else {
         s
     };
@@ -440,6 +440,13 @@ impl<'a> PrefixComponent<'a> {
     #[stable(feature = "rust1", since = "1.0.0")]
     pub fn as_os_str(&self) -> &'a OsStr {
         self.raw
+    }
+
+    pub(crate) fn from_os_str_kind<'raw>(raw: &'raw OsStr, prefix: Prefix<'raw>) -> PrefixComponent<'raw> {
+        PrefixComponent {
+            raw,
+            parsed: prefix
+        }
     }
 }
 
@@ -602,7 +609,7 @@ pub struct Components<'a> {
     path: &'a [u8],
 
     // The prefix as it was originally parsed, if any
-    prefix: Option<Prefix<'a>>,
+    prefix: Option<PrefixComponent<'a>>,
 
     // true if path *physically* has a root separator; for most Windows
     // prefixes, it may have a "logical" rootseparator for the purposes of
@@ -653,12 +660,12 @@ impl<'a> Components<'a> {
     // how long is the prefix, if any?
     #[inline]
     fn prefix_len(&self) -> usize {
-        self.prefix.as_ref().map(Prefix::len).unwrap_or(0)
+        self.prefix.map(|v| v.as_os_str().len()).unwrap_or(0)
     }
 
     #[inline]
     fn prefix_verbatim(&self) -> bool {
-        self.prefix.as_ref().map(Prefix::is_verbatim).unwrap_or(false)
+        self.prefix.as_ref().map(|v| v.kind().is_verbatim()).unwrap_or(false)
     }
 
     /// how much of the prefix is left from the point of view of iteration?
@@ -733,7 +740,7 @@ impl<'a> Components<'a> {
             return true;
         }
         if let Some(p) = self.prefix {
-            if p.has_implicit_root() {
+            if p.kind().has_implicit_root() {
                 return true;
             }
         }
@@ -912,10 +919,7 @@ impl<'a> Iterator for Components<'a> {
                     debug_assert!(self.prefix_len() <= self.path.len());
                     let raw = &self.path[..self.prefix_len()];
                     self.path = &self.path[self.prefix_len()..];
-                    return Some(Component::Prefix(PrefixComponent {
-                        raw: unsafe { u8_slice_as_os_str(raw) },
-                        parsed: self.prefix.unwrap(),
-                    }));
+                    return Some(Component::Prefix(self.prefix.unwrap()));
                 }
                 State::Prefix => {
                     self.front = State::StartDir;
@@ -927,7 +931,7 @@ impl<'a> Iterator for Components<'a> {
                         self.path = &self.path[1..];
                         return Some(Component::RootDir);
                     } else if let Some(p) = self.prefix {
-                        if p.has_implicit_root() && !p.is_verbatim() {
+                        if p.kind().has_implicit_root() && !p.kind().is_verbatim() {
                             return Some(Component::RootDir);
                         }
                     } else if self.include_cur_dir() {
@@ -974,7 +978,7 @@ impl<'a> DoubleEndedIterator for Components<'a> {
                         self.path = &self.path[..self.path.len() - 1];
                         return Some(Component::RootDir);
                     } else if let Some(p) = self.prefix {
-                        if p.has_implicit_root() && !p.is_verbatim() {
+                        if p.kind().has_implicit_root() && !p.kind().is_verbatim() {
                             return Some(Component::RootDir);
                         }
                     } else if self.include_cur_dir() {
@@ -984,10 +988,7 @@ impl<'a> DoubleEndedIterator for Components<'a> {
                 }
                 State::Prefix if self.prefix_len() > 0 => {
                     self.back = State::Done;
-                    return Some(Component::Prefix(PrefixComponent {
-                        raw: unsafe { u8_slice_as_os_str(self.path) },
-                        parsed: self.prefix.unwrap(),
-                    }));
+                    return Some(Component::Prefix(self.prefix.unwrap()));
                 }
                 State::Prefix => {
                     self.back = State::Done;
@@ -1234,7 +1235,7 @@ impl PathBuf {
         {
             let comps = self.components();
             if comps.prefix_len() > 0 && comps.prefix_len() == comps.path.len() &&
-               comps.prefix.unwrap().is_drive() {
+               comps.prefix.unwrap().kind().is_drive() {
                 need_sep = false
             }
         }
@@ -1900,12 +1901,7 @@ impl Path {
     #[stable(feature = "rust1", since = "1.0.0")]
     #[allow(deprecated)]
     pub fn is_absolute(&self) -> bool {
-        if cfg!(target_os = "redox") {
-            // FIXME: Allow Redox prefixes
-            self.has_root() || has_redox_scheme(self.as_u8_slice())
-        } else {
-            self.has_root() && (cfg!(unix) || self.prefix().is_some())
-        }
+        self.has_root() && (cfg!(all(unix, not(target_os = "redox"))) || self.prefix().is_some())
     }
 
     /// Returns `true` if the `Path` is relative, i.e., not absolute.
@@ -1926,7 +1922,7 @@ impl Path {
         !self.is_absolute()
     }
 
-    fn prefix(&self) -> Option<Prefix<'_>> {
+    fn prefix(&self) -> Option<PrefixComponent<'_>> {
         self.components().prefix
     }
 
@@ -2310,8 +2306,7 @@ impl Path {
         Components {
             path: self.as_u8_slice(),
             prefix,
-            has_physical_root: has_physical_root(self.as_u8_slice(), prefix) ||
-                               has_redox_scheme(self.as_u8_slice()),
+            has_physical_root: has_physical_root(self.as_u8_slice(), prefix),
             front: State::Prefix,
             back: State::Body,
         }

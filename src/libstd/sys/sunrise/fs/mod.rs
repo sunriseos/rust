@@ -30,7 +30,7 @@ fn get_filesystem(path: &Path) -> io::Result<(Arc<IFileSystemProxy>, &Path)> {
     assert!(path.is_absolute(), "path is not absolute?");
     let mut iter = path.components();
     let prefix = match iter.next() {
-        Some(Component::Prefix(prefix)) => prefix.as_os_str().to_str().unwrap(),
+        Some(Component::Prefix(prefix)) => prefix.as_os_str().to_str().unwrap().trim_end_matches(':'),
         _ => panic!("If path is absolute, it should start with prefix")
     };
 
@@ -218,7 +218,6 @@ impl File {
         let path = getcwd()?.join(p);
         let (fs, path) = get_filesystem(&path)?;
 
-        println!("HERE");
         unsupported()
     }
 
