@@ -63,18 +63,18 @@ pub fn init() {
     SCHEMA_REGISTRY.lock().unwrap().insert("system", Arc::new(system_filesystem));
 }
 
-fn get_filesystem(path: &Path) -> io::Result<(Arc<IFileSystemProxy>, &Path)> {
+fn get_filesystem(path: &Path) -> io::Result<(Arc<IFileSystemProxy>, &str, &Path)> {
     assert!(path.is_absolute(), "path is not absolute?");
+
     let mut iter = path.components();
     let prefix = match iter.next() {
         Some(Component::Prefix(prefix)) => prefix.as_os_str().to_str().unwrap().trim_end_matches(':'),
         _ => panic!("If path is absolute, it should start with prefix")
     };
-
     
     for (key, value) in SCHEMA_REGISTRY.lock().unwrap().iter() {
         if prefix == *key {
-            return Ok((Arc::clone(&value), &iter.as_path()))
+            return Ok((Arc::clone(&value), prefix, &iter.as_path()))
         }
     }
 
@@ -284,8 +284,7 @@ impl OpenOptions {
 impl File {
     pub fn open(p: &Path, opts: &OpenOptions) -> io::Result<File> {
         let path = getcwd()?.join(p);
-        let (fs, path) = get_filesystem(&path)?;
-
+        let (fs, _, path) = get_filesystem(&path)?;
 
         let path_bytes = path.to_str().unwrap().as_bytes();
         let mut raw_path = [0x0; 0x300];
@@ -412,11 +411,15 @@ impl File {
     }
 
     pub fn duplicate(&self) -> io::Result<File> {
+        // TODO(Sunrise): Used by try_clone()
+        // BODY: To support this we need to make the underlying FileProxy an Arc.
         unsupported()
     }
 
     pub fn set_permissions(&self, _perm: FilePermissions) -> io::Result<()> {
-        unsupported()
+        // TODO(Sunrise): We don't have permissions at the FS level, what do we do here?
+        // BODY: For now we NOP this but should we emulate permissions here?
+        Ok(())
     }
 }
 
@@ -440,31 +443,86 @@ pub fn readdir(_p: &Path) -> io::Result<ReadDir> {
     unsupported()
 }
 
-pub fn unlink(_p: &Path) -> io::Result<()> {
-    unsupported()
+pub fn unlink(path: &Path) -> io::Result<()> {
+    let path = getcwd()?.join(path);
+    let (fs, _, path) = get_filesystem(&path)?;
+
+    let path_bytes = path.to_str().unwrap().as_bytes();
+
+    let mut path = [0x0; 0x300];
+    path[..path_bytes.len()].copy_from_slice(path_bytes);
+
+    fs.delete_file(&path)?;
+
+    Ok(())
 }
 
-pub fn rename(_old: &Path, _new: &Path) -> io::Result<()> {
-    unsupported()
+pub fn rename(old: &Path, new: &Path) -> io::Result<()> {
+    let old = getcwd()?.join(old);
+    let (old_fs, old_prefix, old) = get_filesystem(&old)?;
+
+    let old_path_bytes = old.to_str().unwrap().as_bytes();
+    let mut old_path = [0x0; 0x300];
+    old_path[..old_path_bytes.len()].copy_from_slice(old_path_bytes);
+
+    let new = getcwd()?.join(new);
+    let (new_fs, new_prefix, _) = get_filesystem(&new)?;
+
+    let new_path_bytes = new.to_str().unwrap().as_bytes();
+    let mut new_path = [0x0; 0x300];
+    new_path[..new_path_bytes.len()].copy_from_slice(new_path_bytes);
+
+    let is_dir = old.is_dir();
+
+    if *old_prefix != *new_prefix {
+        return Err(Error::new(ErrorKind::InvalidInput, "Not in the same filesystem"))
+    }
+
+    if (is_dir) {
+        old_fs.rename_directory(&old_path, &new_path)?;
+    } else {
+        old_fs.rename_file(&old_path, &new_path)?;
+    }
+
+    Ok(())
 }
 
-pub fn set_perm(_p: &Path, perm: FilePermissions) -> io::Result<()> {
-    match perm.0 {}
+pub fn set_perm(p: &Path, perm: FilePermissions) -> io::Result<()> {
+    let mut opts = OpenOptions::new();
+
+    opts.read(true);
+    opts.write(true);
+
+    let file = File::open(p, &opts)?;
+    file.set_permissions(perm)
 }
 
-pub fn rmdir(_p: &Path) -> io::Result<()> {
-    unsupported()
+pub fn rmdir(path: &Path) -> io::Result<()> {
+    let path = getcwd()?.join(path);
+    let (fs, _, path) = get_filesystem(&path)?;
+
+    let path_bytes = path.to_str().unwrap().as_bytes();
+
+    let mut path = [0x0; 0x300];
+    path[..path_bytes.len()].copy_from_slice(path_bytes);
+
+    fs.delete_directory(&path)?;
+
+    Ok(())
 }
 
 pub fn remove_dir_all(_path: &Path) -> io::Result<()> {
+    // FIXME: this needs readdir first.
     unsupported()
 }
 
 pub fn readlink(_p: &Path) -> io::Result<PathBuf> {
+    // FIXME: found the error used for non symlink here.
     unsupported()
 }
 
 pub fn symlink(_src: &Path, _dst: &Path) -> io::Result<()> {
+    // TODO(Sunrise): We don't have symlink support
     unsupported()
 }
 
@@ -484,6 +542,19 @@ pub fn canonicalize(_p: &Path) -> io::Result<PathBuf> {
     unsupported()
 }
 
-pub fn copy(_from: &Path, _to: &Path) -> io::Result<u64> {
-    unsupported()
+pub fn copy(from: &Path, to: &Path) -> io::Result<u64> {
+    use crate::fs::File;
+
+    if !from.is_file() {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput,
+                              "the source path is not an existing regular file"))
+    }
+
+    let mut reader = File::open(from)?;
+    let mut writer = File::create(to)?;
+    let perm = reader.metadata()?.permissions();
+
+    let ret = io::copy(&mut reader, &mut writer)?;
+    writer.set_permissions(perm)?;
+    Ok(ret)
 }
