@@ -9,7 +9,7 @@ use crate::path::{Component, Path, PathBuf};
 use crate::sync::Arc;
 use crate::collections::HashMap;
 use lazy_static::lazy_static;
-use sunrise_libuser::fs::{IFileSystemServiceProxy, IFileSystemProxy, IFileProxy};
+use sunrise_libuser::fs::{DirectoryEntry, DirectoryEntryType, IFileSystemServiceProxy, IFileSystemProxy, IFileProxy};
 
 use crate::sys::os::getcwd;
 use crate::sync::Mutex;
@@ -90,7 +90,7 @@ pub struct FileAttr(Void);
 
 pub struct ReadDir(Void);
 
-pub struct DirEntry(Void);
+pub struct DirEntry(DirectoryEntry, &'static str);
 
 #[derive(Clone, Debug)]
 pub struct OpenOptions {
@@ -104,7 +104,8 @@ pub struct OpenOptions {
 
 pub struct FilePermissions(Void);
 
-pub struct FileType(Void);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct FileType(bool);
 
 #[derive(Debug)]
 pub struct DirBuilder { }
@@ -174,44 +175,15 @@ impl fmt::Debug for FilePermissions {
 
 impl FileType {
     pub fn is_dir(&self) -> bool {
-        match self.0 {}
+        self.0
     }
 
     pub fn is_file(&self) -> bool {
-        match self.0 {}
+        !self.is_dir()
     }
 
     pub fn is_symlink(&self) -> bool {
-        match self.0 {}
-    }
-}
-
-impl Clone for FileType {
-    fn clone(&self) -> FileType {
-        match self.0 {}
-    }
-}
-
-impl Copy for FileType {}
-
-impl PartialEq for FileType {
-    fn eq(&self, _other: &FileType) -> bool {
-        match self.0 {}
-    }
-}
-
-impl Eq for FileType {
-}
-
-impl Hash for FileType {
-    fn hash<H: Hasher>(&self, _h: &mut H) {
-        match self.0 {}
-    }
-}
-
-impl fmt::Debug for FileType {
-    fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.0 {}
+        false
     }
 }
 
@@ -231,19 +203,23 @@ impl Iterator for ReadDir {
 
 impl DirEntry {
     pub fn path(&self) -> PathBuf {
-        match self.0 {}
+        let s = crate::str::from_utf8(&self.0.path).expect("Invalid path for DirEntry");
+        let mut res = PathBuf::from(self.1);
+        res.push(s);
+
+        res
     }
 
     pub fn file_name(&self) -> OsString {
-        match self.0 {}
+        OsString::from(self.path().file_name().expect("No file_name availaible for the DirEntry path"))
     }
 
     pub fn metadata(&self) -> io::Result<FileAttr> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn file_type(&self) -> io::Result<FileType> {
-        match self.0 {}
+        Ok(FileType(self.0.directory_entry_type == DirectoryEntryType::Directory))
     }
 }
 
@@ -478,7 +454,7 @@ pub fn rename(old: &Path, new: &Path) -> io::Result<()> {
         return Err(Error::new(ErrorKind::InvalidInput, "Not in the same filesystem"))
     }
 
-    if (is_dir) {
+    if is_dir {
         old_fs.rename_directory(&old_path, &new_path)?;
     } else {
         old_fs.rename_file(&old_path, &new_path)?;
