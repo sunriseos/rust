@@ -78,15 +78,15 @@ pub fn env() -> Env {
     panic!("not supported on sunrise yet")
 }
 
-pub fn getenv(k: &OsStr) -> io::Result<Option<OsString>> {
+pub fn getenv(_k: &OsStr) -> io::Result<Option<OsString>> {
     panic!("not supported on sunrise yet")
 }
 
-pub fn setenv(k: &OsStr, v: &OsStr) -> io::Result<()> {
+pub fn setenv(_k: &OsStr, _v: &OsStr) -> io::Result<()> {
     panic!("not supported on sunrise yet")
 }
 
-pub fn unsetenv(k: &OsStr) -> io::Result<()> {
+pub fn unsetenv(_k: &OsStr) -> io::Result<()> {
     panic!("not supported on sunrise yet")
 }
 

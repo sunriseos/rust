@@ -912,7 +912,6 @@ impl<'a> Iterator for Components<'a> {
                 State::Prefix if self.prefix_len() > 0 => {
                     self.front = State::StartDir;
                     debug_assert!(self.prefix_len() <= self.path.len());
-                    let raw = &self.path[..self.prefix_len()];
                     self.path = &self.path[self.prefix_len()..];
                     return Some(Component::Prefix(self.prefix.unwrap()));
                 }

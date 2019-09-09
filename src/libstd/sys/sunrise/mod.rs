@@ -8,11 +8,6 @@
 //! errors.
 
 use crate::os::raw::c_char;
-use crate::ptr;
-use crate::sys::os_str::Buf;
-use crate::sys_common::{AsInner, FromInner};
-use crate::ffi::{OsString, OsStr};
-use crate::time::Duration;
 
 pub mod alloc;
 pub mod args;

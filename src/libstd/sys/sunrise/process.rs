@@ -67,7 +67,7 @@ impl From<AnonPipe> for Stdio {
 }
 
 impl From<File> for Stdio {
-    fn from(file: File) -> Stdio {
+    fn from(_file: File) -> Stdio {
         unimplemented!()
     }
 }

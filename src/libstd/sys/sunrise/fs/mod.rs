@@ -1,15 +1,15 @@
 use crate::ffi::OsString;
 use crate::fmt;
-use crate::hash::{Hash, Hasher};
 use crate::io::{self, SeekFrom, IoSlice, IoSliceMut};
-use crate::sys::time::SystemTime;
+use crate::sys::time::{UNIX_EPOCH, SystemTime};
 use crate::sys::{unsupported, Void};
+use crate::time::Duration;
 use crate::path::{Component, Path, PathBuf};
 
 use crate::sync::Arc;
 use crate::collections::HashMap;
 use lazy_static::lazy_static;
-use sunrise_libuser::fs::{DirectoryEntry, DirectoryEntryType, IFileSystemServiceProxy, IFileSystemProxy, IFileProxy};
+use sunrise_libuser::fs::{DirectoryEntry, DirectoryEntryType, FileTimeStampRaw, IFileSystemServiceProxy, IFileSystemProxy, IFileProxy};
 
 use crate::sys::os::getcwd;
 use crate::sync::Mutex;
@@ -86,10 +86,12 @@ pub struct File {
     offset: Mutex<u64>
 }
 
-pub struct FileAttr(Void);
+#[derive(Clone, Debug)]
+pub struct FileAttr(PathBuf, u64, FileType);
 
 pub struct ReadDir(Void);
 
+#[derive(Clone, Copy, Debug)]
 pub struct DirEntry(DirectoryEntry, &'static str);
 
 #[derive(Clone, Debug)]
@@ -102,7 +104,8 @@ pub struct OpenOptions {
     create_new: bool
 }
 
-pub struct FilePermissions(Void);
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub struct FilePermissions;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FileType(bool);
@@ -112,64 +115,55 @@ pub struct DirBuilder { }
 
 impl FileAttr {
     pub fn size(&self) -> u64 {
-        match self.0 {}
+        self.1
     }
 
     pub fn perm(&self) -> FilePermissions {
-        match self.0 {}
+        FilePermissions
     }
 
     pub fn file_type(&self) -> FileType {
-        match self.0 {}
+        self.2
+    }
+
+    fn get_timestamp_raw(&self) -> io::Result<FileTimeStampRaw> {
+        let (fs, _, path) = get_filesystem(&self.0)?;
+        let path_bytes = path.to_str().unwrap().as_bytes();
+        let mut raw_path = [0x0; 0x300];
+        raw_path[..path_bytes.len()].copy_from_slice(path_bytes);
+
+        let res = fs.get_file_timestamp_raw(&raw_path)?;
+
+        Ok(res)
     }
 
     pub fn modified(&self) -> io::Result<SystemTime> {
-        match self.0 {}
+        let timestamp = self.get_timestamp_raw()?;
+        let modified_timestamp = Duration::from_secs(timestamp.modified_timestamp);
+        UNIX_EPOCH.checked_add_duration(&modified_timestamp).ok_or_else(|| Error::new(ErrorKind::Other, "Timestamp overflowed outside of SystemTime range"))
     }
 
     pub fn accessed(&self) -> io::Result<SystemTime> {
-        match self.0 {}
+        let timestamp = self.get_timestamp_raw()?;
+        let accessed_timestamp = Duration::from_secs(timestamp.accessed_timestamp);
+        UNIX_EPOCH.checked_add_duration(&accessed_timestamp).ok_or_else(|| Error::new(ErrorKind::Other, "Timestamp overflowed outside of SystemTime range"))
     }
 
     pub fn created(&self) -> io::Result<SystemTime> {
-        match self.0 {}
-    }
-}
-
-impl Clone for FileAttr {
-    fn clone(&self) -> FileAttr {
-        match self.0 {}
+        let timestamp = self.get_timestamp_raw()?;
+        let creation_timestamp = Duration::from_secs(timestamp.creation_timestamp);
+        UNIX_EPOCH.checked_add_duration(&creation_timestamp).ok_or_else(|| Error::new(ErrorKind::Other, "Timestamp overflowed outside of SystemTime range"))
     }
 }
 
 impl FilePermissions {
     pub fn readonly(&self) -> bool {
-        match self.0 {}
+        // TODO(Sunrise): We don't have permissions on Sunrise.
+        false
     }
 
     pub fn set_readonly(&mut self, _readonly: bool) {
-        match self.0 {}
-    }
-}
-
-impl Clone for FilePermissions {
-    fn clone(&self) -> FilePermissions {
-        match self.0 {}
-    }
-}
-
-impl PartialEq for FilePermissions {
-    fn eq(&self, _other: &FilePermissions) -> bool {
-        match self.0 {}
-    }
-}
-
-impl Eq for FilePermissions {
-}
-
-impl fmt::Debug for FilePermissions {
-    fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.0 {}
+        // TODO(Sunrise): We don't have permissions on Sunrise.
     }
 }
 
@@ -215,7 +209,7 @@ impl DirEntry {
     }
 
     pub fn metadata(&self) -> io::Result<FileAttr> {
-        unsupported()
+        Ok(FileAttr(self.path(), self.0.file_size, self.file_type()?))
     }
 
     pub fn file_type(&self) -> io::Result<FileType> {
@@ -313,7 +307,6 @@ impl File {
     }
 
     pub fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
-        let mut buf = buf;
         let mut offset = self.offset.try_lock().unwrap();
 
         let out = self.inner.read(0, *offset, buf.len() as u64, buf)?;
@@ -328,7 +321,6 @@ impl File {
     }
 
     pub fn write(&self, buf: &[u8]) -> io::Result<usize> {
-        let mut buf = buf;
         let mut offset = self.offset.try_lock().unwrap();
 
         self.inner.write(0, *offset, buf.len() as u64, buf)?;
@@ -393,8 +385,6 @@ impl File {
     }
 
     pub fn set_permissions(&self, _perm: FilePermissions) -> io::Result<()> {
-        // TODO(Sunrise): We don't have permissions at the FS level, what do we do here?
-        // BODY: For now we NOP this but should we emulate permissions here?
         Ok(())
     }
 }
@@ -442,7 +432,7 @@ pub fn rename(old: &Path, new: &Path) -> io::Result<()> {
     old_path[..old_path_bytes.len()].copy_from_slice(old_path_bytes);
 
     let new = getcwd()?.join(new);
-    let (new_fs, new_prefix, _) = get_filesystem(&new)?;
+    let (_, new_prefix, _) = get_filesystem(&new)?;
 
     let new_path_bytes = new.to_str().unwrap().as_bytes();
     let mut new_path = [0x0; 0x300];
