@@ -9,7 +9,7 @@ use crate::path::{Component, Path, PathBuf};
 use crate::sync::Arc;
 use crate::collections::HashMap;
 use lazy_static::lazy_static;
-use sunrise_libuser::fs::{DirectoryEntry, DirectoryEntryType, FileTimeStampRaw, IFileSystemServiceProxy, IFileSystemProxy, IFileProxy};
+use sunrise_libuser::fs::{DirectoryEntry, DirectoryEntryType, FileTimeStampRaw, IDirectoryProxy, IFileSystemServiceProxy, IFileSystemProxy, IFileProxy};
 
 use crate::sys::os::getcwd;
 use crate::sync::Mutex;
@@ -83,16 +83,19 @@ fn get_filesystem(path: &Path) -> io::Result<(Arc<IFileSystemProxy>, &str, &Path
 
 pub struct File {
     inner: IFileProxy,
-    offset: Mutex<u64>
+    offset: Mutex<u64>,
+    path: PathBuf
 }
 
 #[derive(Clone, Debug)]
 pub struct FileAttr(PathBuf, u64, FileType);
 
-pub struct ReadDir(Void);
 
-#[derive(Clone, Copy, Debug)]
-pub struct DirEntry(DirectoryEntry, &'static str);
+#[derive(Debug)]
+pub struct ReadDir(IDirectoryProxy, String);
+
+#[derive(Clone, Debug)]
+pub struct DirEntry(DirectoryEntry, String);
 
 #[derive(Clone, Debug)]
 pub struct OpenOptions {
@@ -181,24 +184,34 @@ impl FileType {
     }
 }
 
-impl fmt::Debug for ReadDir {
-    fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.0 {}
-    }
-}
-
 impl Iterator for ReadDir {
     type Item = io::Result<DirEntry>;
 
     fn next(&mut self) -> Option<io::Result<DirEntry>> {
-        match self.0 {}
+        let mut entries = [DirectoryEntry {
+            path: [0; 0x300], attribute: 0,
+            directory_entry_type: DirectoryEntryType::Directory, file_size: 0
+        }; 1];
+
+        let read_result = self.0.read(&mut entries);
+        if let Err(error) = read_result {
+            return Some(Err(error.into()));
+        }
+
+        let count = read_result.unwrap();
+        
+        if count == 0 {
+            return None;
+        }
+
+        Some(Ok(DirEntry(entries[0], self.1.clone())))
     }
 }
 
 impl DirEntry {
     pub fn path(&self) -> PathBuf {
-        let s = crate::str::from_utf8(&self.0.path).expect("Invalid path for DirEntry");
-        let mut res = PathBuf::from(self.1);
+        let s = crate::str::from_utf8(&self.0.path).expect("Invalid path for DirEntry").trim_matches('\0');
+        let mut res = PathBuf::from(self.1.clone());
         res.push(s);
 
         res
@@ -285,25 +298,28 @@ impl File {
         }
 
         Ok(File {
+            path: path.to_path_buf(),
             inner: fs.open_file(flags, &raw_path)?,
             offset: Mutex::new(0)
         })
     }
 
     pub fn file_attr(&self) -> io::Result<FileAttr> {
-        unsupported()
+        Ok(FileAttr(self.path.clone(), self.inner.get_size()?, FileType(false)))
     }
 
     pub fn fsync(&self) -> io::Result<()> {
-        unsupported()
+        self.flush()
     }
 
     pub fn datasync(&self) -> io::Result<()> {
-        unsupported()
+        self.flush()
     }
 
-    pub fn truncate(&self, _size: u64) -> io::Result<()> {
-        unsupported()
+    pub fn truncate(&self, size: u64) -> io::Result<()> {
+        self.inner.set_size(size)?;
+
+        Ok(())
     }
 
     pub fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
@@ -380,7 +396,7 @@ impl File {
 
     pub fn duplicate(&self) -> io::Result<File> {
         // TODO(Sunrise): Used by try_clone()
-        // BODY: To support this we need to make the underlying FileProxy an Arc.
+        // BODY: Only insane people uses this.
         unsupported()
     }
 
@@ -394,8 +410,17 @@ impl DirBuilder {
         DirBuilder { }
     }
 
-    pub fn mkdir(&self, _p: &Path) -> io::Result<()> {
-        unsupported()
+    pub fn mkdir(&self, path: &Path) -> io::Result<()> {
+        let path = getcwd()?.join(path);
+        let (fs, _, path) = get_filesystem(&path)?;
+        let path_bytes = path.to_str().unwrap().as_bytes();
+
+        let mut path = [0x0; 0x300];
+        path[..path_bytes.len()].copy_from_slice(path_bytes);
+
+        fs.create_directory(&path)?;
+
+        Ok(())
     }
 }
 
@@ -405,8 +430,18 @@ impl fmt::Debug for File {
     }
 }
 
-pub fn readdir(_p: &Path) -> io::Result<ReadDir> {
-    unsupported()
+pub fn readdir(path: &Path) -> io::Result<ReadDir> {
+    let path = getcwd()?.join(path);
+    let (fs, prefix, path) = get_filesystem(&path)?;
+
+    let path_bytes = path.to_str().unwrap().as_bytes();
+
+    let mut path = [0x0; 0x300];
+    path[..path_bytes.len()].copy_from_slice(path_bytes);
+
+    let res = ReadDir(fs.open_directory(3, &path)?, String::from(prefix));
+
+    Ok(res)
 }
 
 pub fn unlink(path: &Path) -> io::Result<()> {
@@ -496,12 +531,30 @@ pub fn link(_src: &Path, _dst: &Path) -> io::Result<()> {
     unsupported()
 }
 
-pub fn stat(_p: &Path) -> io::Result<FileAttr> {
+pub fn stat(path: &Path) -> io::Result<FileAttr> {
+    let path = getcwd()?.join(path);
+    let (fs, prefix, path) = get_filesystem(&path)?;
+
+    let parent_path = path.parent();
+
+    let path = path.to_path_buf();
+
+    if parent_path.is_none() {
+        return Ok(FileAttr(path, 0, FileType(true)))
+    } else {
+        for entry in readdir(parent_path.unwrap())? {
+            let entry = entry?;
+            if entry.path() == path {
+                return entry.metadata()
+            }
+        }
+    }
+
     unsupported()
 }
 
-pub fn lstat(_p: &Path) -> io::Result<FileAttr> {
-    unsupported()
+pub fn lstat(path: &Path) -> io::Result<FileAttr> {
+    stat(path)
 }
 
 pub fn canonicalize(_p: &Path) -> io::Result<PathBuf> {
