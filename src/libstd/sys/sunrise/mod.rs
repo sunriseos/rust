@@ -13,6 +13,7 @@ pub mod alloc;
 pub mod args;
 pub mod cmath;
 pub mod env;
+pub mod ext;
 pub mod fast_thread_local;
 pub mod fs;
 pub mod io;
