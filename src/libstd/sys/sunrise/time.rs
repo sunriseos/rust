@@ -12,7 +12,8 @@ pub const UNIX_EPOCH: SystemTime = SystemTime(Duration::from_secs(0));
 
 impl Instant {
     pub fn now() -> Instant {
-        panic!("not supported on sunrise yet")
+        let rtc = RTCManagerProxy::raw_new().unwrap();
+        Instant(Duration::from_secs(rtc.get_rtc_time().unwrap() as u64))
     }
 
     pub const fn zero() -> Instant {
@@ -38,7 +39,7 @@ impl Instant {
 
 impl SystemTime {
     pub fn now() -> SystemTime {
-        let rtc = RTCManagerProxy::raw_new().unwrap();    
+        let rtc = RTCManagerProxy::raw_new().unwrap();
         SystemTime(Duration::from_secs(rtc.get_rtc_time().unwrap() as u64))
     }
 
