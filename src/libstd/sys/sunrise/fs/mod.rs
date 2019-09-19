@@ -2,7 +2,7 @@ use crate::ffi::OsString;
 use crate::fmt;
 use crate::io::{self, SeekFrom, IoSlice, IoSliceMut};
 use crate::sys::time::{UNIX_EPOCH, SystemTime};
-use crate::sys::{unsupported, Void};
+use crate::sys::unsupported;
 use crate::time::Duration;
 use crate::path::{Component, Path, PathBuf};
 
@@ -533,7 +533,7 @@ pub fn link(_src: &Path, _dst: &Path) -> io::Result<()> {
 
 pub fn stat(path: &Path) -> io::Result<FileAttr> {
     let path = getcwd()?.join(path);
-    let (fs, prefix, path) = get_filesystem(&path)?;
+    let (_, _, path) = get_filesystem(&path)?;
 
     let parent_path = path.parent();
 

@@ -1,7 +1,7 @@
 use crate::os::sunrise::prelude::*;
 
 use crate::error::Error as StdError;
-use crate::ffi::{CStr, CString, OsStr, OsString};
+use crate::ffi::{OsStr, OsString};
 use crate::fmt;
 use crate::iter;
 use crate::io;

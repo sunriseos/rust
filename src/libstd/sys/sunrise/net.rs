@@ -17,79 +17,79 @@ impl TcpStream {
     }
 
     pub fn set_read_timeout(&self, _: Option<Duration>) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn set_write_timeout(&self, _: Option<Duration>) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn write_timeout(&self) -> io::Result<Option<Duration>> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn peek(&self, _: &mut [u8]) -> io::Result<usize> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn read(&self, _: &mut [u8]) -> io::Result<usize> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn read_vectored(&self, _: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn write(&self, _: &[u8]) -> io::Result<usize> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn write_vectored(&self, _: &[IoSlice<'_>]) -> io::Result<usize> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn peer_addr(&self) -> io::Result<SocketAddr> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn socket_addr(&self) -> io::Result<SocketAddr> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn shutdown(&self, _: Shutdown) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn duplicate(&self) -> io::Result<TcpStream> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn set_nodelay(&self, _: bool) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn nodelay(&self) -> io::Result<bool> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn set_ttl(&self, _: u32) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn ttl(&self) -> io::Result<u32> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn set_nonblocking(&self, _: bool) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 }
 
@@ -107,39 +107,39 @@ impl TcpListener {
     }
 
     pub fn socket_addr(&self) -> io::Result<SocketAddr> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn accept(&self) -> io::Result<(TcpStream, SocketAddr)> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn duplicate(&self) -> io::Result<TcpListener> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn set_ttl(&self, _: u32) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn ttl(&self) -> io::Result<u32> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn set_only_v6(&self, _: bool) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn only_v6(&self) -> io::Result<bool> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn set_nonblocking(&self, _: bool) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 }
 
@@ -157,127 +157,127 @@ impl UdpSocket {
     }
 
     pub fn peer_addr(&self) -> io::Result<SocketAddr> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn socket_addr(&self) -> io::Result<SocketAddr> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn recv_from(&self, _: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn peek_from(&self, _: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn send_to(&self, _: &[u8], _: &SocketAddr) -> io::Result<usize> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn duplicate(&self) -> io::Result<UdpSocket> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn set_read_timeout(&self, _: Option<Duration>) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn set_write_timeout(&self, _: Option<Duration>) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn read_timeout(&self) -> io::Result<Option<Duration>> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn write_timeout(&self) -> io::Result<Option<Duration>> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn set_broadcast(&self, _: bool) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn broadcast(&self) -> io::Result<bool> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn set_multicast_loop_v4(&self, _: bool) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn multicast_loop_v4(&self) -> io::Result<bool> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn set_multicast_ttl_v4(&self, _: u32) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn multicast_ttl_v4(&self) -> io::Result<u32> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn set_multicast_loop_v6(&self, _: bool) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn multicast_loop_v6(&self) -> io::Result<bool> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn join_multicast_v4(&self, _: &Ipv4Addr, _: &Ipv4Addr)
                          -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn join_multicast_v6(&self, _: &Ipv6Addr, _: u32)
                          -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn leave_multicast_v4(&self, _: &Ipv4Addr, _: &Ipv4Addr)
                           -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn leave_multicast_v6(&self, _: &Ipv6Addr, _: u32)
                           -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn set_ttl(&self, _: u32) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn ttl(&self) -> io::Result<u32> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn set_nonblocking(&self, _: bool) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn recv(&self, _: &mut [u8]) -> io::Result<usize> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn peek(&self, _: &mut [u8]) -> io::Result<usize> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn send(&self, _: &[u8]) -> io::Result<usize> {
-        match self.0 {}
+        unsupported()
     }
 
     pub fn connect(&self, _: io::Result<&SocketAddr>) -> io::Result<()> {
-        match self.0 {}
+        unsupported()
     }
 }
 

@@ -1,6 +1,5 @@
 use crate::ffi::CStr;
 use crate::io;
-use crate::sys::{unsupported, Void};
 use crate::time::Duration;
 use crate::usize;
 
