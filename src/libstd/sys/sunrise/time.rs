@@ -1,7 +1,6 @@
 use crate::time::Duration;
 use sunrise_libuser::time::RTCManagerProxy;
 
-
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub struct Instant(Duration);
 

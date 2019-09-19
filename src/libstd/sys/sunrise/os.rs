@@ -8,8 +8,10 @@ use crate::io;
 use crate::path::{self, PathBuf};
 use crate::slice;
 use crate::str;
-use crate::sys::unsupported;
-
+use crate::sync::Mutex;
+use crate::vec::Vec;
+use crate::collections::HashMap;
+use lazy_static::lazy_static;
 pub fn errno() -> i32 {
     0
 }
@@ -19,11 +21,17 @@ pub fn error_string(_errno: i32) -> String {
 }
 
 pub fn getcwd() -> io::Result<PathBuf> {
-    Ok(PathBuf::from("system:/"))
+    Ok(crate::env::var_os("PWD").map(PathBuf::from).unwrap_or_else(|| {
+        PathBuf::from("system:/")
+    }))
 }
 
-pub fn chdir(_: &path::Path) -> io::Result<()> {
-    unsupported()
+pub fn chdir(path: &path::Path) -> io::Result<()> {
+    if !path.exists() {
+        return Err(io::Error::new(io::ErrorKind::NotFound, "Entry not found"))
+    }
+
+    setenv(OsStr::new("PWD"), path.as_os_str())
 }
 
 pub struct SplitPaths<'a> {
@@ -83,34 +91,45 @@ pub fn current_exe() -> io::Result<PathBuf> {
     panic!("not supported on sunrise yet")
 }
 
+lazy_static! {
+    /// Storage of all events of the current process.
+    static ref ENVIRONMENT_STORAGE: Mutex<HashMap<OsString, OsString>> = Mutex::new(HashMap::new());
+}
+
 // This enum is used as the storage for a bunch of types which can't actually
 // exist.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum Void {}
 
-pub struct Env(Void);
+pub struct Env(Vec<(OsString, OsString)>, usize);
 
 impl Iterator for Env {
     type Item = (OsString, OsString);
     fn next(&mut self) -> Option<(OsString, OsString)> {
-        match self.0 {}
+        let res = self.0.get(self.1).map(|x| x.clone());
+        self.1 += 1;
+
+        res
     }
 }
 
 pub fn env() -> Env {
-    panic!("not supported on sunrise yet")
+    let env: Vec<(OsString, OsString)> = ENVIRONMENT_STORAGE.lock().unwrap().iter().map(|x| (x.0.clone(), x.1.clone())).collect();
+    Env(env, 0)
 }
 
-pub fn getenv(_k: &OsStr) -> io::Result<Option<OsString>> {
-    panic!("not supported on sunrise yet")
+pub fn getenv(k: &OsStr) -> io::Result<Option<OsString>> {
+    Ok(ENVIRONMENT_STORAGE.lock().unwrap().get(&k.to_os_string()).map(|v| v.to_os_string()))
 }
 
-pub fn setenv(_k: &OsStr, _v: &OsStr) -> io::Result<()> {
-    panic!("not supported on sunrise yet")
+pub fn setenv(k: &OsStr, v: &OsStr) -> io::Result<()> {
+    ENVIRONMENT_STORAGE.lock().unwrap().insert(k.to_os_string(), v.to_os_string());
+    Ok(())
 }
 
-pub fn unsetenv(_k: &OsStr) -> io::Result<()> {
-    panic!("not supported on sunrise yet")
+pub fn unsetenv(k: &OsStr) -> io::Result<()> {
+    ENVIRONMENT_STORAGE.lock().unwrap().remove(&k.to_os_string());
+    Ok(())
 }
 
 pub fn temp_dir() -> PathBuf {
