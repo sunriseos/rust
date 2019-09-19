@@ -96,11 +96,6 @@ lazy_static! {
     static ref ENVIRONMENT_STORAGE: Mutex<HashMap<OsString, OsString>> = Mutex::new(HashMap::new());
 }
 
-// This enum is used as the storage for a bunch of types which can't actually
-// exist.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
-pub enum Void {}
-
 pub struct Env(Vec<(OsString, OsString)>, usize);
 
 impl Iterator for Env {
