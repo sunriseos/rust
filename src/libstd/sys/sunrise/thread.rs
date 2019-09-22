@@ -49,7 +49,7 @@ impl Thread {
     }
 
     pub fn join(self) {
-        panic!("not supported on sunrise yet")
+        self.0.join().unwrap();
     }
 }
 
