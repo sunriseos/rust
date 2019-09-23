@@ -2,15 +2,15 @@ use crate::ffi::OsString;
 use crate::marker::PhantomData;
 use crate::vec;
 
-pub unsafe fn init(_argc: isize, _argv: *const *const u8) {
-    // On sunrise these should always be null, so there's nothing for us to do here
-}
+/// One-time global initialization.
+pub unsafe fn init(argc: isize, argv: *const *const u8) { imp::init(argc, argv) }
 
-pub unsafe fn cleanup() {
-}
+/// One-time global cleanup.
+pub unsafe fn cleanup() { imp::cleanup() }
 
+/// Returns the command line arguments
 pub fn args() -> Args {
-    panic!("not supported on sunrise yet")
+    imp::args()
 }
 
 pub struct Args {
@@ -43,5 +43,50 @@ impl ExactSizeIterator for Args {
 impl DoubleEndedIterator for Args {
     fn next_back(&mut self) -> Option<OsString> {
         self.iter.next_back()
+    }
+}
+
+mod imp {
+    use crate::os::sunrise::prelude::*;
+    use crate::ptr;
+    use crate::ffi::{CStr, OsString};
+    use crate::marker::PhantomData;
+    use super::Args;
+
+    use crate::sys_common::mutex::Mutex;
+
+    static mut ARGC: isize = 0;
+    static mut ARGV: *const *const u8 = ptr::null();
+    // We never call `ENV_LOCK.init()`, so it is UB to attempt to
+    // acquire this mutex reentrantly!
+    static LOCK: Mutex = Mutex::new();
+
+    pub unsafe fn init(argc: isize, argv: *const *const u8) {
+        let _guard = LOCK.lock();
+        ARGC = argc;
+        ARGV = argv;
+    }
+
+    pub unsafe fn cleanup() {
+        let _guard = LOCK.lock();
+        ARGC = 0;
+        ARGV = ptr::null();
+    }
+
+    pub fn args() -> Args {
+        Args {
+            iter: clone().into_iter(),
+            _dont_send_or_sync_me: PhantomData
+        }
+    }
+
+    fn clone() -> Vec<OsString> {
+        unsafe {
+            let _guard = LOCK.lock();
+            (0..ARGC).map(|i| {
+                let cstr = CStr::from_ptr(*ARGV.offset(i) as *const libc::c_char);
+                OsStringExt::from_vec(cstr.to_bytes().to_vec())
+            }).collect()
+        }
     }
 }
