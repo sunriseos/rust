@@ -64,7 +64,7 @@ pub fn init() {
 }
 
 fn get_filesystem(path: &Path) -> io::Result<(Arc<IFileSystemProxy>, &str, &Path)> {
-    assert!(path.is_absolute(), "path is not absolute?");
+    assert!(path.is_absolute(), "path is not absolute? {:?}", path);
 
     let mut iter = path.components();
     let prefix = match iter.next() {
@@ -130,7 +130,8 @@ impl FileAttr {
     }
 
     fn get_timestamp_raw(&self) -> io::Result<FileTimeStampRaw> {
-        let (fs, _, path) = get_filesystem(&self.0)?;
+        let path = getcwd()?.join(self.0.clone());
+        let (fs, _, path) = get_filesystem(&path)?;
         let path_bytes = path.to_str().unwrap().as_bytes();
         let mut raw_path = [0x0; 0x300];
         raw_path[..path_bytes.len()].copy_from_slice(path_bytes);
@@ -557,8 +558,66 @@ pub fn lstat(path: &Path) -> io::Result<FileAttr> {
     stat(path)
 }
 
-pub fn canonicalize(_p: &Path) -> io::Result<PathBuf> {
-    unsupported()
+/// Splits a path at the first `/` it encounters.
+///
+/// Returns a tuple of the parts before and after the cut.
+///
+/// # Notes:
+/// - The rest part can contain duplicates '/' in the middle of the path. This should be fine as you should call split_path to parse the rest part.
+pub fn split_path(path: &str) -> (&str, Option<&str>) {
+    let mut path_split = path.trim_matches('/').splitn(2, '/');
+
+    // unwrap will never fail here
+    let comp = path_split.next().unwrap();
+    let rest_opt = path_split.next().and_then(|x| Some(x.trim_matches('/')));
+
+    (comp, rest_opt)
+}
+
+/// Get an absolute path from an user path
+fn get_absolute_path(path: &str) -> String {
+    let mut path = path;
+    let mut path_parts = Vec::new();
+
+    loop {
+        let (comp, rest_opt) = split_path(path);
+
+        match comp {
+            "." => {},
+            ".." => {
+                path_parts.pop();
+            }
+            _ => {
+                let mut component = String::new();
+                component.push('/');
+                component.push_str(comp);
+
+                path_parts.push(component);
+            }
+        }
+
+        if rest_opt.is_none() {
+            break;
+        }
+
+        path = rest_opt.unwrap();
+    }
+
+    let mut res = String::new();
+
+    if path_parts.is_empty() {
+        res.push('/');
+    }
+
+    for part in path_parts {
+        res.push_str(part.as_str())
+    }
+
+    res
+}
+
+pub fn canonicalize(p: &Path) -> io::Result<PathBuf> {
+    Ok(PathBuf::from(get_absolute_path(p.to_str().unwrap())))
 }
 
 pub fn copy(from: &Path, to: &Path) -> io::Result<u64> {

@@ -26,4 +26,10 @@ pub mod ffi;
 pub mod prelude {
     #[doc(no_inline)] #[stable(feature = "rust1", since = "1.0.0")]
     pub use super::ffi::{OsStrExt, OsStringExt};
+
+    #[doc(no_inline)] #[stable(feature = "rust1", since = "1.0.0")]
+    pub use sunrise_libuser::capabilities;
+
+    #[doc(no_inline)] #[stable(feature = "rust1", since = "1.0.0")]
+    pub use sunrise_libuser::syscalls::nr;
 }
