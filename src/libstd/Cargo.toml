@@ -14,16 +14,16 @@ path = "lib.rs"
 crate-type = ["dylib", "rlib"]
 
 [dependencies]
-alloc = { path = "../liballoc" }
-cfg-if = { version = "0.1.8", features = ['rustc-dep-of-std'] }
+#alloc = { path = "../liballoc" }
+cfg-if = { version = "0.1.8" }
 panic_unwind = { path = "../libpanic_unwind", optional = true }
 panic_abort = { path = "../libpanic_abort" }
-core = { path = "../libcore" }
-libc = { version = "0.2.51", default-features = false, features = ['rustc-dep-of-std'] }
-compiler_builtins = { version = "0.1.16" }
+#core = { path = "../libcore" }
+libc = { version = "0.2.51", default-features = false, features = ['align'] }
+#compiler_builtins = { version = "0.1.16" }
 profiler_builtins = { path = "../libprofiler_builtins", optional = true }
 unwind = { path = "../libunwind" }
-hashbrown = { version = "0.4.0", features = ['rustc-dep-of-std'] }
+hashbrown = { version = "0.6.0", features = ['rustc-internal-api'], default-features = false }
 
 [dependencies.backtrace]
 version = "0.3.29"
@@ -60,11 +60,7 @@ fortanix-sgx-abi = { version = "0.3.2", features = ['rustc-dep-of-std'] }
 # Need #SunriseOS/SunriseOS#402 to actually build
 #sunrise-libuser = {git = "https://github.com/sunriseos/SunriseOS.git", features = ['rustc-dep-of-std'] }
 sunrise-libuser = {path = "../../../SunriseOS/libuser", features = ['rustc-dep-of-std'] }
-lazy_static = "1.3"
-
-# Thog: Needed as it seems liballoc and libstd conflict because this feature isn't activated here 
-[target.'cfg(target_os = "sunrise")'.dependencies.compiler_builtins]
-features = ['mem']
+lazy_static = { version = "1.3", features = ['spin_no_std'] }
 
 [build-dependencies]
 cc = "1.0"
@@ -74,11 +70,11 @@ default = ["std_detect_file_io", "std_detect_dlsym_getauxval"]
 
 panic-unwind = ["panic_unwind"]
 profiler = ["profiler_builtins"]
-compiler-builtins-c = ["alloc/compiler-builtins-c"]
+#compiler-builtins-c = ["alloc/compiler-builtins-c"]
 llvm-libunwind = ["unwind/llvm-libunwind"]
 
 # Make panics and failed asserts immediately abort without formatting any message
-panic_immediate_abort = ["core/panic_immediate_abort"]
+#panic_immediate_abort = ["core/panic_immediate_abort"]
 
 # An off-by-default feature which enables a linux-syscall-like ABI for libstd to
 # interoperate with the host environment. Currently not well documented and
