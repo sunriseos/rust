@@ -912,7 +912,6 @@ impl<'a> Iterator for Components<'a> {
                 State::Prefix if self.prefix_len() > 0 => {
                     self.front = State::StartDir;
                     debug_assert!(self.prefix_len() <= self.path.len());
-                    let raw = &self.path[..self.prefix_len()];
                     self.path = &self.path[self.prefix_len()..];
                     return Some(Component::Prefix(self.prefix.unwrap()));
                 }
@@ -1896,7 +1895,7 @@ impl Path {
     #[stable(feature = "rust1", since = "1.0.0")]
     #[allow(deprecated)]
     pub fn is_absolute(&self) -> bool {
-        self.has_root() && (cfg!(all(unix, not(target_os = "redox"))) || self.prefix().is_some())
+        self.has_root() && (cfg!(all(unix, not(target_os = "redox"), not(target_os = "sunrise"))) || self.prefix().is_some())
     }
 
     /// Returns `true` if the `Path` is relative, i.e., not absolute.

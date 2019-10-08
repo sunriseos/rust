@@ -49,6 +49,7 @@ pub mod mutex;
 #[cfg(any(rustdoc, // see `mod os`, docs are generated for multiple platforms
           unix,
           target_os = "redox",
+          target_os = "sunrise",
           target_os = "cloudabi",
           target_arch = "wasm32",
           all(target_vendor = "fortanix", target_env = "sgx")))]
@@ -69,6 +70,7 @@ cfg_if::cfg_if! {
     if #[cfg(any(target_os = "cloudabi",
                  target_os = "l4re",
                  target_os = "redox",
+                 target_os = "sunrise",
                  all(target_arch = "wasm32", not(target_os = "emscripten")),
                  all(target_vendor = "fortanix", target_env = "sgx")))] {
         pub use crate::sys::net;
