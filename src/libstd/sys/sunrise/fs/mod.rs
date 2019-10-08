@@ -18,6 +18,8 @@ use crate::io::{Error, ErrorKind};
 
 use sunrise_libuser::error::{Error as LibUserError, FileSystemError};
 
+pub use crate::sys_common::fs::remove_dir_all;
+
 #[stable(feature = "rust1", since = "1.0.0")]
 impl From<LibUserError> for Error {
     fn from(user_error: LibUserError) -> Error {
@@ -513,11 +515,6 @@ pub fn rmdir(path: &Path) -> io::Result<()> {
     Ok(())
 }
 
-pub fn remove_dir_all(_path: &Path) -> io::Result<()> {
-    // FIXME: this needs readdir first.
-    unsupported()
-}
-
 pub fn readlink(_p: &Path) -> io::Result<PathBuf> {
     // FIXME: found the error used for non symlink here.
     unsupported()
@@ -529,6 +526,7 @@ pub fn symlink(_src: &Path, _dst: &Path) -> io::Result<()> {
 }
 
 pub fn link(_src: &Path, _dst: &Path) -> io::Result<()> {
+    // TODO(Sunrise): We don't have symlink support
     unsupported()
 }
 
@@ -551,7 +549,7 @@ pub fn stat(path: &Path) -> io::Result<FileAttr> {
         }
     }
 
-    unsupported()
+    Err(Error::new(ErrorKind::NotFound, "The given resource couldn't be found."))
 }
 
 pub fn lstat(path: &Path) -> io::Result<FileAttr> {
