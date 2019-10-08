@@ -48,8 +48,7 @@ wasi = { version = "0.9.0", features = ['rustc-dep-of-std'], default-features = 
 
 [target.'cfg(target_os = "sunrise")'.dependencies]
 # Need #SunriseOS/SunriseOS#402 to actually build
-# sunrise-libuser = {git = "https://github.com/sunriseos/SunriseOS.git", default-features = false, features = ['rustc-dep-of-std'] }
-sunrise-libuser = {path = "../../../kfs/libuser", default-features = false, features = ['rustc-dep-of-std'] }
+sunrise-libuser = { git = "https://github.com/sunriseos/sunriseos.git", default-features = false, features = ['rustc-dep-of-std'] }
 lazy_static = { version = "1.3", features = ['spin_no_std'] }
 
 [features]
