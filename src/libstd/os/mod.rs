@@ -35,6 +35,9 @@ cfg_if::cfg_if! {
         #[cfg(any(target_os = "linux", target_os = "l4re"))]
         pub mod linux;
 
+        #[cfg(any(target_os = "sunrise"))]
+        #[stable(feature = "rust1", since = "1.0.0")]
+        pub use crate::sys::ext as sunrise;
     }
 }
 

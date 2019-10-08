@@ -479,7 +479,7 @@ pub mod task {
 
     #[doc(inline)]
     #[unstable(feature = "wake_trait", issue = "69912")]
-    pub use alloc::task::*;
+    pub use alloc_crate::task::*;
 }
 
 #[stable(feature = "futures_api", since = "1.36.0")]

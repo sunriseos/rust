@@ -546,7 +546,7 @@ impl Error for char::ParseCharError {
 }
 
 #[unstable(feature = "try_reserve", reason = "new API", issue = "48043")]
-impl Error for alloc::collections::TryReserveError {}
+impl Error for alloc_crate::collections::TryReserveError {}
 
 // Copied from `any.rs`.
 impl dyn Error + 'static {

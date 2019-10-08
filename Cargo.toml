@@ -2,6 +2,8 @@
 members = [
   "src/bootstrap",
   "src/rustc",
+  "src/libcore",
+  "src/liballoc",
   "src/libstd",
   "src/libtest",
   "src/librustc_codegen_llvm",
@@ -16,12 +18,7 @@ members = [
   "src/tools/build-manifest",
   "src/tools/remote-test-client",
   "src/tools/remote-test-server",
-  "src/tools/rust-installer",
-  "src/tools/cargo",
   "src/tools/rustdoc",
-  "src/tools/rls",
-  "src/tools/rustfmt",
-  "src/tools/miri",
   "src/tools/rustdoc-themes",
   "src/tools/unicode-table-generator",
   "src/tools/expand-yaml-anchors",
@@ -46,14 +43,16 @@ debug-assertions = false
 # RLS and the Cargo binary itself. The RLS depends on Cargo as a git repository
 # so we use a `[patch]` here to override the github repository with our local
 # vendored copy.
-[patch."https://github.com/rust-lang/cargo"]
-cargo = { path = "src/tools/cargo" }
+#[patch."https://github.com/rust-lang/cargo"]
+#cargo = { path = "src/tools/cargo" }
 
 [patch.crates-io]
+compiler_builtins = { git = "https://github.com/sunriseos/compiler-builtins.git", branch = "sunrise" }
+
 # Similar to Cargo above we want the RLS to use a vendored version of `rustfmt`
 # that we're shipping as well (to ensure that the rustfmt in RLS and the
 # `rustfmt` executable are the same exact version).
-rustfmt-nightly = { path = "src/tools/rustfmt" }
+#rustfmt-nightly = { path = "src/tools/rustfmt" }
 
 # See comments in `src/tools/rustc-workspace-hack/README.md` for what's going on
 # here

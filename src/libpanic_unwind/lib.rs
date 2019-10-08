@@ -33,6 +33,7 @@
 // `real_imp` is unused with Miri, so silence warnings.
 #![cfg_attr(miri, allow(dead_code))]
 
+extern crate alloc;
 use alloc::boxed::Box;
 use core::any::Any;
 use core::panic::BoxMeUp;
