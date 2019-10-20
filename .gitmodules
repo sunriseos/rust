@@ -1,3 +1,0 @@
-[submodule "src/stdsimd"]
-	path = src/stdsimd
-	url = https://github.com/rust-lang-nursery/stdsimd.git
