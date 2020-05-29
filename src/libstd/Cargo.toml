@@ -20,7 +20,7 @@ panic_unwind = { path = "../libpanic_unwind", optional = true }
 panic_abort = { path = "../libpanic_abort" }
 #core = { path = "../libcore" }
 libc = { version = "0.2.51", default-features = false, features = ['align'] }
-#compiler_builtins = { version = "0.1.16" }
+#compiler_builtins = { version = "0.1.16", features = ['rustc-dep-of-std', 'soft-float'] }
 profiler_builtins = { path = "../libprofiler_builtins", optional = true }
 unwind = { path = "../libunwind" }
 hashbrown = { version = "0.6.2", default-features = false, features = ['rustc-internal-api'] }
@@ -29,7 +29,8 @@ hashbrown = { version = "0.6.2", default-features = false, features = ['rustc-in
 package = "backtrace"
 version = "0.3.46"
 default-features = false # without the libstd `backtrace` feature, stub out everything
-features = [ "rustc-dep-of-std" ] # enable build support for integrating into libstd
+features = []
+# TODO: backtrace-sys fork.
 
 [dev-dependencies]
 rand = "0.7"

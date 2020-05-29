@@ -118,10 +118,8 @@ checksum = "b1e692897359247cc6bb902933361652380af0f1b7651ae5c5013407f30e109e"
 dependencies = [
  "backtrace-sys",
  "cfg-if",
- "compiler_builtins",
  "libc",
  "rustc-demangle",
- "rustc-std-workspace-core",
 ]
 
 [[package]]
@@ -131,9 +129,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "18fbebbe1c9d1f383a9cc7e8ccdb471b91c8d024ee9c2ca5b5346121fe8b4399"
 dependencies = [
  "cc",
- "compiler_builtins",
  "libc",
- "rustc-std-workspace-core",
 ]
 
 [[package]]
@@ -297,10 +293,6 @@ name = "cfg-if"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
-dependencies = [
- "compiler_builtins",
- "rustc-std-workspace-core",
-]
 
 [[package]]
 name = "chalk-derive"
@@ -584,6 +576,12 @@ name = "core-foundation-sys"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7ca8a5221364ef15ce201e8ed2f609fc312682a8f4e0e3d4aa5879764e0fa3b"
+
+[[package]]
+name = "core-futures-tls"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0407dd6f9b5ed2842f9d287934231e3d270a240d2bb9bf8a56f02e37381c793a"
 
 [[package]]
 name = "crc32fast"
@@ -1524,11 +1522,11 @@ checksum = "ae91b68aebc4ddb91978b11a1b02ddd8602a05ec19002801c5666000e05e0f83"
 
 [[package]]
 name = "linked_list_allocator"
-version = "0.8.4"
+version = "0.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e70e46c13c0e8374c26cec5752e3347ca1087d9711de8f45aa513a7700efd73d"
+checksum = "47de1a43fad0250ee197e9e124e5b5deab3d7b39d4428ae8a6d741ceb340c362"
 dependencies = [
- "spinning_top",
+ "spin",
 ]
 
 [[package]]
@@ -2582,10 +2580,6 @@ name = "rustc-demangle"
 version = "0.1.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4c691c0e608126e00913e33f0ccf3727d5fc84573623b8d65b2df340b5201783"
-dependencies = [
- "compiler_builtins",
- "rustc-std-workspace-core",
-]
 
 [[package]]
 name = "rustc-hash"
@@ -3718,15 +3712,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
-name = "spinning_top"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32d801a3a53bcf5071f85fef8d5cab9e5f638fc5580a37e6eb7aba4b37438d24"
-dependencies = [
- "lock_api",
-]
-
-[[package]]
 name = "stable_deref_trait"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3763,10 +3748,12 @@ dependencies = [
  "hermit-abi",
  "lazy_static",
  "libc",
+ "log",
  "panic_abort",
  "panic_unwind",
  "profiler_builtins",
  "rand 0.7.3",
+ "spin",
  "sunrise-libuser",
  "unwind",
  "wasi",
@@ -3871,6 +3858,7 @@ dependencies = [
 [[package]]
 name = "sunrise-libkern"
 version = "0.1.0"
+source = "git+https://github.com/sunriseos/sunriseos.git#0c5e284fa10fdc64791fbb95019a145ea75c76d2"
 dependencies = [
  "bitfield",
  "bitflags",
@@ -3883,11 +3871,13 @@ dependencies = [
 [[package]]
 name = "sunrise-libuser"
 version = "0.1.0"
+source = "git+https://github.com/sunriseos/sunriseos.git#0c5e284fa10fdc64791fbb95019a145ea75c76d2"
 dependencies = [
  "arrayvec",
  "bit_field",
  "bitfield",
  "byteorder",
+ "core-futures-tls",
  "failure",
  "futures-preview",
  "generational-arena",
@@ -3904,6 +3894,7 @@ dependencies = [
 [[package]]
 name = "sunrise-libutils"
 version = "0.1.0"
+source = "git+https://github.com/sunriseos/sunriseos.git#0c5e284fa10fdc64791fbb95019a145ea75c76d2"
 dependencies = [
  "bit_field",
  "byteorder",
@@ -3913,6 +3904,7 @@ dependencies = [
 [[package]]
 name = "swipc-gen"
 version = "0.1.0"
+source = "git+https://github.com/sunriseos/sunriseos.git#0c5e284fa10fdc64791fbb95019a145ea75c76d2"
 dependencies = [
  "bit_field",
  "darling 0.9.0",
@@ -3925,6 +3917,7 @@ dependencies = [
 [[package]]
 name = "swipc-parser"
 version = "0.1.0"
+source = "git+https://github.com/sunriseos/sunriseos.git#0c5e284fa10fdc64791fbb95019a145ea75c76d2"
 dependencies = [
  "pest",
  "pest_derive",
